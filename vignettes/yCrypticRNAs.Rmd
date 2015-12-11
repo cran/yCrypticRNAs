@@ -1,0 +1,128 @@
+---
+title: "yCrypticRNAs"
+author: "Nicole Uwimana, Benjamin Haibe-Kains, François Robert"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 4
+    highlight: null
+vignette: >
+  %\VignetteIndexEntry{yCrypticRNAs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(collapse = FALSE, comment = "", prompt = TRUE)
+```
+
+## 1. Introduction
+The yCrypticRNAs package implements methods for cryptic transcription detection from RNA-seq data. Using a probabilistic method based on a cumulative distribution function, the package allows the identification of cryptic transcripts genome-wide. Along with the probabilistic method, the 5'/3' ratio (Cheung et al., 2008) and the 3' enrichment (DeGennaro et al., 2013) methods are implemented, giving the user all the tools for cryptic transcription detection. While previous methods only identify genes within which cryptic transcription occurs, this package -using a bootstrap approach- allow for the prediction of the position of the cryptic transcription start sites.
+
+### 1.1 Requirements        
+yCrypticRNAs works only on Unix/linux platforms.
+
+
+### 1.2 Installation  
+Install package  
+```{r eval = FALSE}
+install.packages("ycrypticrnas")
+```
+
+Load the package in your curent workspace:  
+```{r}
+library("yCrypticRNAs")
+```
+
+## 2. Cryptic scores
+
+### 2.1 Datasets (coverageDataSet)
+
+yCrypticRNAs was concieve for high-throughput RNA-Seq data. To be able to 
+calculate cryptic scores a coverageDataSet is needed. The coverageDataSet 
+is inherit form a data.table that contains the coverage values for each sample.
+For more information on the coverage files: `?coverageDataSet`.
+
+```{r, results='asis', width = 20}
+#create A coverageDataSet
+# Suppose an RNA-seq experiment that was done in duplicates in wild-type cells and mutant cells.
+# Data were sequenced in strand-specific manner and we wish to use fragments for paired-end reads.
+types <- c("wt", "wt", "mut", "mut")
+bamfiles <- system.file("extdata", paste0(types, "_rep", 1:2,".bam"),
+                        package = "yCrypticRNAs")
+scaling_factors <- c(0.069872847, 0.081113079, 0.088520251, 0.069911116)
+
+data("annotations")
+data <- coverageDataSet(bamfiles = bamfiles, annotations = annotations,
+                        types = types, sf = scaling_factors,
+                        paired_end = TRUE, as_fragments = TRUE)
+```
+
+### 2.2 Datasets (geneCoverage)
+geneCoverage dataset contains coverage data for one specific gene
+without the intronic regions.
+
+```{r}
+# load introns annotations
+data("introns")
+
+# create geneCoverage dataset for FLO8 gene
+flo8 <- gene_coverage(coverageDataSet = data, name = "YER109C", introns = introns)
+```
+
+### 2.3 Calculate the cryptic score for a specific gene.
+
+yCrypticRNAs offers three methods for the calculation of cryptic scores for each gene. The methods are: `zscore_score`, `ratio_score` (Cheung et al., 2008), and `enrichment_score` (DeGennaro et al., 2013). Each function takes 
+an object of type geneCoverage as input. 
+```{r, width=60}
+# using the 3'/5' ratio method
+ratio_score(geneCoverage = flo8)
+
+# using the 3' enrichemnt method
+enrichment_score(geneCoverage = flo8)
+
+# using the probabilistic method
+zscore_score(geneCoverage = flo8)
+
+```
+
+### 2.4 Calculate the cryptic scores for all genes.
+The package offers a method for rapid calculation of cryptic score for all genes.
+For this, you must provide an object of type "CoverageDataSet" and specify the method you want to use.
+
+```{r, eval=FALSE}
+genome_wide_scores(coverageDataSet = data, method = "ratio",
+                   outfile = "/tmp/ratio_scores.txt", introns = introns)
+genome_wide_scores(coverageDataSet = data, method = "enrichment",
+                   outfile = "/tmp/enrichment_scores.txt", introns = introns)
+genome_wide_scores(coverageDataSet = data, method = "probabilistic",
+                   outfile = "/tmp/zscores.txt", introns = introns)
+```
+
+
+## 3. Cryptic transcription start sites (cTSS)
+The package implements a probabilistic method able to estimate the positions of cryptic transcription start sites (cryptic zones). We have defined five ways of identifying cryptic zones (for more information see `?initiation_sites`).
+
+### 3.1 Calculate cTSS
+```{r, fig.width=7, fig.height=6}
+#calculating the cTSS for FLO8 gene
+flo8_cTSS <- initiation_sites(
+  name = "YER109C", bamfiles = bamfiles,
+  types = types, annotations = annotations,
+  introns = introns, sf = scaling_factors
+)
+
+#visualize results
+par(mfrow = c(3,2))
+plot(flo8, cTSS = flo8_cTSS, method = "methodC_gaussian")
+plot(flo8, cTSS = flo8_cTSS, method = "methodA")
+plot(flo8, cTSS = flo8_cTSS, method = "methodB")
+plot(flo8, cTSS = flo8_cTSS, method = "methodC")
+plot(flo8, cTSS = flo8_cTSS, method = "methodD")
+```
+
+## References
+Cheung V, et al. (2008) Chromatin- and transcription-related factors repress tran-scription from within coding regions throughout the Saccharomyces cerevisiae genome. PLoS Biol. Nov 11;6(11):e277.
+
+DeGennaro CM, et al. (2013) Spt6 regulates intragenic and antisense transcription, nucleosome positioning, and histone modifications genome-wide in fission yeast. Mol Cell Biol. Dec;33(24):4779-92. 
