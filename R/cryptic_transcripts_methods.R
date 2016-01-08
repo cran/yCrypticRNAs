@@ -118,7 +118,7 @@ CrypticScore <- function(geneInfo, cryptic_score, controls, method) {
 #' @examples
 #'
 #' data(yer109c)
-#' zscore_score(geneCoverage = yer109c, iterations = 100)
+#' zscore_score(geneCoverage = yer109c, iterations = 1000)
 zscore_score <- function(geneCoverage, iterations = 10000) {
   score <- .zscore(
     data = list(
@@ -182,7 +182,10 @@ zscore_score <- function(geneCoverage, iterations = 10000) {
 .simulate_fscore_values <- function(simulationIndex, values) {
   data <- lapply(values[c(2:3)], sample)
   cdf <- .difference_of_cdf(data)
-  fscore(xValues = values[[1]], yValues = cdf)
+  rm(data)
+  res <- fscore(xValues = values[[1]], yValues = cdf)
+  rm(cdf)
+  return(res)
 }
 
 ## calculate the z score between two samples.
@@ -203,6 +206,7 @@ zscore_score <- function(geneCoverage, iterations = 10000) {
     return (NA)
   }
 
+  gc()
   simulated_values <-
     unlist(parallel::mclapply(seq_len(iterations), .simulate_fscore_values, values = data))
 

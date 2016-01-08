@@ -28,6 +28,6 @@ Calculates the cryptic score (z score) using the probabilistic method.
 \examples{
 
 data(yer109c)
-zscore_score(geneCoverage = yer109c, iterations = 50)
+zscore_score(geneCoverage = yer109c, iterations = 1000)
 }
 

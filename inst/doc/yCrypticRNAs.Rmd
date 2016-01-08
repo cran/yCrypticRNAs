@@ -27,7 +27,7 @@ yCrypticRNAs works only on Unix/linux platforms.
 ### 1.2 Installation  
 Install package  
 ```{r eval = FALSE}
-install.packages("ycrypticrnas")
+install.packages("yCrypticRNAs")
 ```
 
 Load the package in your curent workspace:  
@@ -44,7 +44,7 @@ calculate cryptic scores a coverageDataSet is needed. The coverageDataSet
 is inherit form a data.table that contains the coverage values for each sample.
 For more information on the coverage files: `?coverageDataSet`.
 
-```{r, results='asis', width = 20}
+```{r, results="hide", width = 20}
 #create A coverageDataSet
 # Suppose an RNA-seq experiment that was done in duplicates in wild-type cells and mutant cells.
 # Data were sequenced in strand-specific manner and we wish to use fragments for paired-end reads.
@@ -110,7 +110,7 @@ The package implements a probabilistic method able to estimate the positions of 
 flo8_cTSS <- initiation_sites(
   name = "YER109C", bamfiles = bamfiles,
   types = types, annotations = annotations,
-  introns = introns, sf = scaling_factors
+  introns = introns, sf = scaling_factors, replicates = 100
 )
 
 #visualize results

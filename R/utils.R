@@ -64,7 +64,10 @@ scale_data <- function(data, column = 8, sf){
 
   if(is.character(data)){
     file <- data
-    data <- data.table::fread(file)
+    data <- tryCatch(
+      data.table::fread(file),
+      error = function(e) stop("From scale_data function: ", e)
+    )
   }else{
     data <- data.table::as.data.table(data)
     file <- NULL
@@ -124,14 +127,15 @@ coverage <- function(reads, annotation, sf = NULL, outfile = NULL){
     stop("The annotation can't be NULL")
 
 
-  if (is.character(reads))
+  if (is.character(reads)){
     a.file = reads
-  else
+  } else{
     .writeFile(reads, a.file <- tempfile())
+  }
 
-  if (is.character(annotation))
+  if (is.character(annotation)){
     b.file = annotation
-  else{
+  }else{
     annotation <- as.annotationsSet(annotation)
     .writeFile(annotation, b.file <- tempfile())
   }
@@ -146,7 +150,7 @@ coverage <- function(reads, annotation, sf = NULL, outfile = NULL){
 
   tryCatch(
     capture.output(
-      coverage_cpp(a.file, b.file, "-d"),
+      coverage_cpp(a.file, b.file, c("-d", "-s")),
       file = file, append = T
     ),
     error = function(e) {
@@ -165,5 +169,11 @@ coverage <- function(reads, annotation, sf = NULL, outfile = NULL){
   if (!is.null(outfile)) {
     return(paste("see results in file: ", outfile))
   }
-  data.table::fread(file)
+
+  res <- tryCatch(
+    data.table::fread(file),
+    error = function(e) stop("Error in coverage function: ", e)
+  )
+  unlink(file)
+  return(res)
 }

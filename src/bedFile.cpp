@@ -2,7 +2,7 @@
  bedFile.cpp
 
  Code modified from : https://github.com/arq5x/bedtools2/blob/master/src/utils/bedFile/bedFile.cpp
- 
+
  Date of modification: 2015/11/04
 
  Licensed under the GNU General Public License 2.0 license.
@@ -145,8 +145,10 @@ void BedFile::GetLine(void) {
   getline(*_bedStream, _bedLine);
 
   // ditch \r for Windows.
-  if (_bedLine[_bedLine.size()-1] == '\r') {
-    _bedLine.resize(_bedLine.size()-1);
+  if(_bedLine.size() >= 1){
+    if (_bedLine[_bedLine.size()-1] == '\r') {
+      _bedLine.resize(_bedLine.size()-1);
+    }
   }
   // increment the line number
   _lineNum++;
@@ -206,8 +208,10 @@ bool BedFile::GetNextBed(BED &bed, bool forceSorted) {
       // of reading the header.
 
       // ditch \r for Windows if necessary.
-      if (_bedLine[_bedLine.size()-1] == '\r') {
-        _bedLine.resize(_bedLine.size()-1);
+      if(_bedLine.size() >= 1){
+        if (_bedLine[_bedLine.size()-1] == '\r') {
+          _bedLine.resize(_bedLine.size()-1);
+        }
       }
       Tokenize(_bedLine, _bedFields);
       _firstLine = false;

@@ -10,7 +10,10 @@
                                        introns, sf) {
   .shuffle <- function(file, percentage) {
     n <- length(count.fields(file)) * (1 - percentage)
-    data <- data.table::fread(file)
+    data <- tryCatch(
+      data.table::fread(file),
+      error = function(e) stop("From .gene_coverage_from_reads function: ", e)
+    )
     data[sample(nrow(data), n)]
   }
 
@@ -83,10 +86,12 @@
     introns, sf
   )
 
-  .perpendicular_distance(
+  res <- .perpendicular_distance(
     xValues = data$pos,
     yValues = .difference_of_cdf(data[2:3])
   )
+  rm(data); gc()
+  return(res)
 }
 
 ## Methods section ----------------
@@ -185,13 +190,14 @@
 #' @param bamfile a character vector indicating the BAM file name.
 #'        Note: The bamfile must be sorted by coordinates.
 #' @param annotations an object of type \code{\link{annotationsSet}}
-#'        containing information on genes.
+#'        containing information on one genes.
 #' @param paired_end logical indicating whether the \code{bamfile}
 #'        contains paired-end data.
 #' @param as_fragments logical indicating if paired-end data must be paired
 #'        and merged to form fragments.
 #' @param outfile a character vector indicating the output file name.
 #'        If not provided, the result will be internalized in R.
+#' @param flanking_region Number of bases before and after the gene ORF should be included.
 #'
 #' @return An object of type \code{\link[data.table]{data.table}} with 9 columns.
 #'  \tabular{ll}{
@@ -212,7 +218,7 @@
 #' data(annotations)
 #' bam_to_reads(bamfile, annotations)
 bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
-                         as_fragments = TRUE, outfile = NULL) {
+                         as_fragments = TRUE, outfile = NULL, flanking_region = 0) {
 
   if(!paired_end & as_fragments){
     stop("You can't make fragments for data that are not paired-end")
@@ -223,22 +229,7 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
   }
 
   index <- paste0(bamfile, ".bai")
-  unlink_index <- FALSE
-  if(!file.exists(index)){
-    unlink_index <- TRUE
-    suppressWarnings(tryCatch(
-      Rsamtools::indexBam(bamfile),
-      error = function(e){
-        tryCatch(
-          Rsamtools::sortBam(bamfile, substr_left(bamfile, -4)),
-          error = function(e2){
-            stop(e2)
-          }
-        )
-        Rsamtools::indexBam(bamfile, index)
-      }
-    ))
-  }
+  unlink_index <- .index_bam(bamfile, index)
 
   if(!is.null(outfile))
     if(file.exists(outfile))
@@ -247,7 +238,8 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
   genes <- .get_genes(annotations)
   res <- do.call(rbind, lapply(genes, function(gene) {
     annotation <- .get_annotation(annotations, gene)
-    .bam_to_reads_by_gene(bamfile, annotation, paired_end, as_fragments, outfile)
+    .bam_to_reads_by_gene(bamfile, annotation, paired_end,
+                          as_fragments, outfile, flanking_region)
   }))
 
   if(unlink_index)
@@ -256,10 +248,68 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
     return (res)
 }
 
-.bam_to_reads_by_gene <- function(bamfile, annotation,
-                                  paired_end, as_fragments, outfile) {
+.index_bam <- function(infile, outfile){
+  unlink_index <- FALSE
+  if(!file.exists(outfile)){
+    unlink_index <- TRUE
+    suppressWarnings(tryCatch(
+      Rsamtools::indexBam(infile),
+      error = function(e){
+        tryCatch(
+          Rsamtools::sortBam(infile, substr_left(infile, -4)),
+          error = function(e2){
+            stop(e2)
+          }
+        )
+        Rsamtools::indexBam(infile, outfile)
+      }
+    ))
+  }
+  return(unlink_index)
+}
 
-  gene <- IRanges::RangesList(IRanges::IRanges(start = annotation$start, end = annotation$end))
+.bam_to_coverage <- function(bamfile, annotations, sf, paired_end = TRUE,
+                         as_fragments = TRUE, outfile = NULL) {
+
+  index <- paste0(bamfile, ".bai")
+  unlink_index <- .index_bam(bamfile, index)
+
+  if(!is.null(outfile))
+    if(file.exists(outfile))
+      unlink(outfile)
+
+  genes <- .get_genes(annotations)
+
+  progress <- FALSE
+  if(length(genes) > 1){
+    print(paste(bamfile, ":"))
+    pb <- txtProgressBar(min = 0, max = length(genes), label = bamfile, style = 3)
+    progress <- TRUE
+  }
+  res <- do.call(rbind, lapply(genes, function(gene) {
+    annotation <- .get_annotation(annotations, gene)
+
+    if(progress)
+      setTxtProgressBar(pb, which(genes == gene))
+
+    reads <- .bam_to_reads_by_gene(bamfile, annotation, paired_end, as_fragments, outfile, flanking_region = 100)
+    coverage(reads, annotation, sf)
+  }))
+  if(progress)
+    close(pb)
+
+  if(unlink_index)
+    unlink(index)
+  if(is.null(outfile))
+    return (res)
+}
+
+.bam_to_reads_by_gene <- function(bamfile, annotation, paired_end,
+                                  as_fragments, outfile, flanking_region) {
+
+
+  gene <- IRanges::RangesList(IRanges::IRanges(start = annotation$start - flanking_region,
+                                               end = annotation$end + flanking_region))
   names(gene) <- annotation$chromosome
   gene_bam_file <- tempfile()
 
@@ -294,8 +344,9 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
     start = sam_data$pos,
     end = sam_data$pos + sam_data$qwidth,
     name = sam_data$qname,
-    flag = sam_data$flag
+    mapq = sam_data$mapq
   )
+  bed_data <- bed_data[ bed_data$mapq == 50]
   data.table::setorder(bed_data, name)
 }
 
@@ -305,9 +356,9 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
   second_no_mate <- which(!is.element(second$name, first$name))
 
   if(length(first_no_mate) > 0)
-    first <- first[ - which(!is.element(name, second$name))]
+    first <- first[ - first_no_mate]
   if(length(second_no_mate) > 0)
-    second <- second[ - which(!is.element(name, first$name))]
+    second <- second[ - second_no_mate]
 
   first[, end := second$end]
   return(first)
@@ -336,17 +387,24 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
 
     if (is.null(neg99) || is.null(neg147))
       return (NULL)
-    if (as_fragments)
-      return (.as_fragments(neg99, neg147))
+    if (as_fragments){
+      res <- .as_fragments(neg99, neg147)
+      res [, strand := "-"]
+      return (res)
+    }
 
-    return (merge(neg99, neg147, by = names(neg99), all = T))
+    res <- merge(neg99, neg147, by = names(neg99), all = T)
+    res [, strand := "-"]
+    return (res)
   }
   flag <- Rsamtools::scanBamFlag(
     isUnmappedQuery = FALSE, isMinusStrand = TRUE,
     isSecondaryAlignment = FALSE, isDuplicate = FALSE,
     isNotPassingQualityControls = FALSE
   )
-  return(.select_flag(bamfile, flag))
+  res <- .select_flag(bamfile, flag)
+  res [, strand := "-"]
+  return(res)
 }
 
 .select_pos_strand <- function(bamfile, paired_end, as_fragments){
@@ -371,16 +429,24 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
 
     if(is.null(pos83) || is.null(pos163))
       return ( NULL)
-    if(as_fragments)
-      return (.as_fragments(pos163, pos83))
-    return (merge(pos83, pos163, by = names(pos83), all = T))
+    if(as_fragments){
+      res <- .as_fragments(pos163, pos83)
+      res[, strand := "+"]
+      return (res)
+    }
+
+    res <- merge(pos83, pos163, by = names(pos83), all = T)
+    res[, strand := "+"]
+    return (res)
   }
   flag <- Rsamtools::scanBamFlag(
     isUnmappedQuery = FALSE, isMinusStrand = TRUE,
     isSecondaryAlignment = FALSE, isDuplicate = FALSE,
     isNotPassingQualityControls = FALSE
   )
-  return(.select_flag(bamfile, flag))
+  res <- .select_flag(bamfile, flag)
+  res[, strand := "+"]
+  return(res)
 }
 
 # cTSS function --------------------
@@ -452,6 +518,7 @@ bam_to_reads <- function(bamfile, annotations, paired_end = TRUE,
 #'                              containing the information on the gene.}
 #'
 #' @importFrom stats quantile
+#' @importFrom utils setTxtProgressBar txtProgressBar
 #' @examples
 #' data("annotations")
 #' samples <- c("wt_rep1", "wt_rep2", "mut_rep1", "mut_rep2")
@@ -497,18 +564,15 @@ initiation_sites <- function(name, bamfiles, types, annotations, introns = NULL,
       annotation = list(annotation),
       paired_end = paired_end,
       as_fragments = as_fragments,
-      outfile = gene_reads
+      outfile = gene_reads,
+      flanking_region = 100
     )
-    empty_file = is.element(0, file.size(gene_reads))
-  }
-  else{
+    empty_file = is.element(0, base::file.size(gene_reads))
+  }else{
     empty_file <- TRUE
   }
 
-
-
   if(! empty_file){
-
     geneSampleTable <- list(gene_information = annotation,
                             types = types,
                             files = gene_reads)
@@ -524,18 +588,18 @@ initiation_sites <- function(name, bamfiles, types, annotations, introns = NULL,
                                            geneSampleTable = geneSampleTable,
                                            percentage = percentage, introns = introns,
                                            sf = sf)
-
     simulated_fmax <- base::sapply(simulated_scores, max)
     q <- quantile(simulated_fmax, probs = c(2.5, 97.5)/100)
     tss_positions <- which(observed_distances > q[1] & observed_distances < q[2])
   }else{
-    tss_position <- NULL
+    tss_positions <- NULL
   }
 
   if( length(tss_positions) == 0 ){
-    lapply(gene_reads, unlink)
-    result <- list( NA, NA, NA, NA, NA)
+    if(is.element(name, annotations$name))
+      lapply(gene_reads, unlink)
 
+    result <- list( NA, NA, NA, NA, NA)
     names(result) <- c("methodC_gaussian", "methodA", "methodB", "methodC", "methodD")
     result$gene_information <- annotation
     return(result)

@@ -36,9 +36,10 @@
 #
 #
 # # Calculating the cryptic scores for all the genes in the data
-# genome_wide_scores(coverageDataSet = data, method = "ratio")
-# genome_wide_scores(coverageDataSet = data, method = "enrichment")
-# genome_wide_scores(coverageDataSet = data, method = "probabilistic")
+# genome_wide_scores(data, "ratio", "ratio.txt")
+# genome_wide_scores(data, "enrichment", "enrichment.txt")
+# genome_wide_scores(data, "probabilistic", "probabilistic.txt")
+# unlink(c("ratio.txt", "enrichment.txt", "probabilistic.txt"))
 #
 # ## cryptic transcription start sites.
 #

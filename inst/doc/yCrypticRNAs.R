@@ -2,12 +2,12 @@
 knitr::opts_chunk$set(collapse = FALSE, comment = "", prompt = TRUE)
 
 ## ----eval = FALSE--------------------------------------------------------
-#  install.packages("ycrypticrnas")
+#  install.packages("yCrypticRNAs")
 
 ## ------------------------------------------------------------------------
 library("yCrypticRNAs")
 
-## ---- results='asis', width = 20-----------------------------------------
+## ---- results="hide", width = 20-----------------------------------------
 #create A coverageDataSet
 # Suppose an RNA-seq experiment that was done in duplicates in wild-type cells and mutant cells.
 # Data were sequenced in strand-specific manner and we wish to use fragments for paired-end reads.
@@ -52,7 +52,7 @@ zscore_score(geneCoverage = flo8)
 flo8_cTSS <- initiation_sites(
   name = "YER109C", bamfiles = bamfiles,
   types = types, annotations = annotations,
-  introns = introns, sf = scaling_factors
+  introns = introns, sf = scaling_factors, replicates = 100
 )
 
 #visualize results

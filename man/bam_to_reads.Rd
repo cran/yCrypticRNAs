@@ -5,14 +5,14 @@
 \title{Convert BAM files into BED files containing the reads overlaping the specified annotations.}
 \usage{
 bam_to_reads(bamfile, annotations, paired_end = TRUE, as_fragments = TRUE,
-  outfile = NULL)
+  outfile = NULL, flanking_region = 0)
 }
 \arguments{
 \item{bamfile}{a character vector indicating the BAM file name.
 Note: The bamfile must be sorted by coordinates.}
 
 \item{annotations}{an object of type \code{\link{annotationsSet}}
-containing information on genes.}
+containing information on one genes.}
 
 \item{paired_end}{logical indicating whether the \code{bamfile}
 contains paired-end data.}
@@ -22,6 +22,8 @@ and merged to form fragments.}
 
 \item{outfile}{a character vector indicating the output file name.
 If not provided, the result will be internalized in R.}
+
+\item{flanking_region}{Number of bases before and after the gene ORF should be included.}
 }
 \value{
 An object of type \code{\link[data.table]{data.table}} with 9 columns.

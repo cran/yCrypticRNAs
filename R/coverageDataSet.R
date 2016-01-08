@@ -65,16 +65,20 @@ coverageDataSet <- function(bamfiles, annotations, types,
       stop(paste("The file:", file, "doesn't exist or is empty") )
   })
 
+  if(!paired_end & as_fragments){
+    stop("You can't make fragments for data that are not paired-end")
+  }
+
   if(length(unique(types)) != 2)
     stop("The program handle only two types of samples. Example: WT vs MUT or untreated vs treated")
 
-  # bam to reads or fragments
-  reads <- lapply(bamfiles, bam_to_reads,
-                  annotations = annotations,
-                  paired_end, as_fragments)
+  # bam to cov or fragments
+  cov <- mapply(.bam_to_coverage, bamfile = bamfiles,
+                annotations = list(annotations),
+                sf = sf, paired_end, as_fragments, SIMPLIFY = F)
 
-  data <- .get_data_from_reads(reads, annotations, types, sf)
-  remove(reads)
+  data <- .get_data_from_coverage(cov, types, sf)
+  remove(cov)
   invisible(gc())
 
   type1_u <- unique(types)[1]
@@ -99,6 +103,10 @@ coverageDataSet <- function(bamfiles, annotations, types,
     annotation = list(annotations),
     sf = sf, SIMPLIFY = F
   )
+  .get_data_from_coverage( cov, types, sf)
+}
+
+.get_data_from_coverage <- function(cov, types, sf){
 
   type1_u <- unique(types)[1]
   type1 <- paste0(l <- types[which(types == type1_u)],
@@ -122,7 +130,6 @@ coverageDataSet <- function(bamfiles, annotations, types,
   data.table::setkey(data, "name")
   return(data)
 }
-
 
 
 #' Compute coverage data for a specific gene.
@@ -185,7 +192,7 @@ gene_coverage <- function(coverageDataSet, name, introns = NULL) {
   gene_data$original_pos <- clean_data$original_pos
 
   gene_data$gene_information <-
-    as.data.frame(coverageDataSet$data[name][,1:5, with = F][1,])
+    as.data.frame(coverageDataSet$data[name][,1:6, with = F][1,])
   gene_data$introns <- clean_data$introns
   gene_data$samples <- coverageDataSet$samples
 
@@ -279,13 +286,13 @@ plot.geneCoverage <- function (x, cTSS = NULL, method = NULL, ...) {
   # par(mar = c(5, 4, 1, 1),  las = 1)
   par(mar = c(3,2,0.5, 0.5), las = 1)
   plot(x = x$original_pos, y = x$mean_type1, ylim = c(0, ylim),
-       xaxt = "n", bty = "n", lty = 2, ylab = "RNA-Seq signal (FPM)",
+       xaxt = "n", bty = "n", ylab = "RNA-Seq signal (FPM)",
        xlab = "Distance from transcript start site (bp)", type = "l",
        cex.axis = 0.8, cex.lab = 0.8)
   l <- length(x$original_pos)
   axis(side = 1, at = c(seq(0, l, by = 500), l),
        labels = c(seq(0, l, by = 500), l), cex.axis = 0.8)
-  lines(x = x$original_pos, y = x$mean_type2)
+  lines(x = x$original_pos, y = x$mean_type2, lty = 2)
   samples <- c(strsplit(x$samples$type1[1], "_")[[1]][1],
                strsplit(x$samples$type2[1], "_")[[1]][1])
 
