@@ -2,7 +2,7 @@
  bedFile.h
 
  Code modified from : https://github.com/arq5x/bedtools2/blob/master/src/utils/bedFile/bedFile.h
- 
+
  Date of modification: 2015/11/04
 
  Licensed under the GNU General Public License 2.0 license.
@@ -318,7 +318,7 @@ inline
     start >>= _binFirstShift;
     end   >>= _binFirstShift;
 
-    for (register short i = 0; i < _binLevels; ++i) {
+    for (short i = 0; i < _binLevels; ++i) {
       if (start == end) return _binOffsetsExtended[i] + start;
       start >>= _binNextShift;
       end   >>= _binNextShift;
@@ -804,7 +804,7 @@ private:
              << endl;
         Rcpp::stop(error.str());
       }
-      else if ( (bed.start < 0) || (bed.end < 0) ) {
+      else if ( (bed.start < 0) || ((bed.end) < 0) ) {
         std::stringstream error;
         error << "Error: malformed VCF entry at line "
              << _lineNum << ". Coordinate detected that is < 0. "
@@ -888,7 +888,7 @@ private:
              << endl;
         Rcpp::stop(error.str());
       }
-      if ( (bed.start < 0) || (bed.end < 0) ) {
+      if ((bed.start < 0) || ((bed.end) < 0)) {
         std::stringstream error;
         error << "Error: malformed GFF entry at line "
              << _lineNum

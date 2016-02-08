@@ -1,4 +1,4 @@
-a332caa2b75f904da9acd4b30a594b26 *DESCRIPTION
+2768dac8cf39469b72da077ab8b0314b *DESCRIPTION
 29c2bc0211493334c3b87c925863ab2d *NAMESPACE
 a9c1a9c2db978ddb0e43f970df4a0d2f *R/RcppExports.R
 5b71c91e6290044ec6441402b55e1f3d *R/annotationSet.R
@@ -8,14 +8,14 @@ ea85c4ff9ecee8bfc783b0f3b1582c63 *R/datasets-documentations.R
 f82c88f7a53dce8ee1b1362f7bdbca66 *R/initiation_points_methods.R
 2e7dc731ea23666929b8d1776c441c1c *R/utils.R
 61690bb197f05731b8f9d9ea1175d99c *R/yCrypticRNAs.R
-a6662d804229e95b12908c5ad2a52c2e *build/vignette.rds
+74418e60b184405f405f7dd7cc7944bc *build/vignette.rds
 b987db0ee4612b5dba23942d59e2a690 *data/annotations.rda
 79d204cc1343a8503288dd3e17e0c59f *data/introns.rda
 e185238572fd98542d29227fa2ec4987 *data/rna_seq_signals.rda
 ead5ca2bbea26c62210b66819faa5a77 *data/yer109c.rda
 c5e31ab4087c1f4e004cc623929c740a *inst/doc/yCrypticRNAs.R
 22b10f0818e04f59e97c65351749f09e *inst/doc/yCrypticRNAs.Rmd
-07ec95dfb74a54380823ae0688e2cccd *inst/doc/yCrypticRNAs.html
+38438e7897bf3959999c94260107bc9c *inst/doc/yCrypticRNAs.pdf
 0eb480c87555bb01af20ad0c73d99e0d *inst/extdata/mut_rep1.bam
 43882d8b8d026db9233a2295e8dca016 *inst/extdata/mut_rep2.bam
 e5a2dff917017b6f0af105bbb9bc709b *inst/extdata/wt_rep1.bam
@@ -40,7 +40,7 @@ d1c29ecad2958acb3c3cf2b72d6753a1 *src/BlockedIntervals.cpp
 83c7f2fed2dbb8f99ce07e42528e95c5 *src/BlockedIntervals.h
 92d7dd508abdfafa2f214d5b695518f6 *src/RcppExports.cpp
 844b292a4536d1c8069c9d16339771fd *src/bedFile.cpp
-0092c4e34d8e8e938ae981ff08c67d0f *src/bedFile.h
+754d72a356af1c5f25cb4257812c9919 *src/bedFile.h
 fa6051ed11c2263d9b503e6ac3e2c159 *src/lineFileUtilities.h
 437774d36b86fe113826d140057a94ce *src/my_coverage.cpp
 59209c6e91ddb6ce931b166fa2cd3758 *src/my_coverage.h
